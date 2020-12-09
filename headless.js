@@ -144,13 +144,12 @@ const query = { // Object for fetching selector values
     loginPd: '#loginPW',
     loginBtn: 'div form div.login-buttons > button:nth-child(1)',
 
-    userInfo: '#navbar-container ul > li.light-blue.dropdown-modal > a > span',
-
-    // prevSwitch: '#chkFINISHED_YN',
-    prevSwitch: 'div.main-content div.page-content div.form-group > div:nth-child(2) li > div:nth-child(1) > label',
     subj: '#Subject-select',
     subjEng: 'eAw5Wkv6E92IkZ3O2gUo3w{e}{e}',
-    tr1: '#TaskList-table > tbody > tr:nth-child(1)'
+    prevSwitch: 'div.main-content div.page-content div.form-group > div:nth-child(2) li > div:nth-child(1) > label',
+    chrowMax: '#TaskList-table_length > label > select',
+
+    problemtr: '#TaskList-table > tbody > tr'
 };
 
 // npm run head
@@ -196,14 +195,28 @@ exports.run = async function () {
 
         await page.waitForSelector(query.prevSwitch);
 
-        await wait(page.select(query.subj, query.subjEng),  600);
-        await wait(page.click(query.prevSwitch),            1000);
+        await wait(page.select(query.subj, query.subjEng), 600);
+        await wait(page.click (query.prevSwitch), 600);
+        await wait(page.select(query.chrowMax, '100'), 200);
         console.log('switched subj prev');
 
-        // await page.waitForSelector(query.tr1).then(r=>console.log(r));
-        // await page.waitForRequest(req => console.log(req));
+        const probList = await page.$$(query.problemtr);
+        console.log('stored days:', probList.length);
+        
+        const values = [];
 
-        await page.screenshot({ path: './benedu.png', fullPage: true });
+        for (let tr of probList) {
+            const value = await page.evaluate(el => el.getAttribute('value'), tr);
+            values.push(value);
+        }
+        console.log('pushed problem link ids');
+
+        values.reverse().forEach(async value => {
+            await page.goto(`https://benedu.co.kr/StudentStudy/Commentary?id=${value.slice(0,-6)}%7Be%7D%7Be%7D&value=ymWuGYYSOfmJLRPkt3xlfw%7Be%7D%7Be%7D&type=3104jPV6524rCGsSRjjVsA%7Be%7D%7Be%7D`, { waitUntil: 'networkidle2' });
+            //
+            await page.screenshot({ path: './benedu.png', fullPage: true });
+        });
+
         // await page.click(query.title);
 
         // await replaceTxtValue(page, title);
