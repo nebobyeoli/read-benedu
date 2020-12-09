@@ -189,11 +189,9 @@ exports.run = async function () {
             console.log('already logged in');
         }
 
-        // await page.goto('https://benedu.co.kr/StudentStudy/TaskList', { waitUntil: 'networkidle2' });
         await page.goto('https://benedu.co.kr/StudentStudy/TaskList');
-        console.log('goto /StudentStudy/TaskList');
-
         await page.waitForSelector(query.prevSwitch);
+        console.log('goto /StudentStudy/TaskList');
 
         await wait(page.select(query.subj, query.subjEng), 600);
         await wait(page.click (query.prevSwitch), 600);
@@ -205,17 +203,38 @@ exports.run = async function () {
         
         const values = [];
 
-        for (let tr of probList) {
+        // From https://stackoverflow.com/a/56467778
+        for (const tr of probList) {
             const value = await page.evaluate(el => el.getAttribute('value'), tr);
             values.push(value);
         }
         console.log('pushed problem link ids');
 
-        values.reverse().forEach(async value => {
-            await page.goto(`https://benedu.co.kr/StudentStudy/Commentary?id=${value.slice(0,-6)}%7Be%7D%7Be%7D&value=ymWuGYYSOfmJLRPkt3xlfw%7Be%7D%7Be%7D&type=3104jPV6524rCGsSRjjVsA%7Be%7D%7Be%7D`, { waitUntil: 'networkidle2' });
-            //
+        const questions = [];
+        const answers  = [];
+        const explains = [];
+
+        let i = 1;
+
+        for (const value of values.reverse()) {
+
+            const link = `https://benedu.co.kr/StudentStudy/Commentary?id=${value.slice(0,-6)}%7Be%7D%7Be%7D&value=ymWuGYYSOfmJLRPkt3xlfw%7Be%7D%7Be%7D&type=0`;
+            await page.goto(link, { waitUntil: 'networkidle2' });
+
+            let question = `${i++}. `;
+            // let answer = '';
+
+            let childCount = await page.$eval('#QUESTION_1 > div:nth-child(2)', el => el.childElementCount);
+
+            for (let i = 1; i <= childCount; i++) {
+                let content = await page.$eval(`#QUESTION_1 > div:nth-child(2) > :nth-child(${i})`, child => [child.tagName, child.textContent]);
+                console.log(content);
+            }
+
+            console.log('=========================================');
+            
             await page.screenshot({ path: './benedu.png', fullPage: true });
-        });
+        };
 
         // await page.click(query.title);
 
