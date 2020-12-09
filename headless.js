@@ -55,7 +55,7 @@ const query = { // Object for fetching selector values
     td10th: '#TaskList-table > tbody > tr:nth-child(10)',
     chrowMax: '#TaskList-table_length > label > select',
 
-    problemtr: '#TaskList-table > tbody > tr'
+    problemtr: '#TaskList-table > tbody > tr',
 };
 
 // npm run head
@@ -94,7 +94,6 @@ exports.run = async function () {
         console.log('enabled stealth');
 
         await page.waitForSelector(query.loginDiv);
-        await page.keyboard.press('Tab');
 
         if (await page.$eval(query.loginEmail, el => el.value)) await rmValue(page, query.loginEmail);
         await wait(page.type(query.loginEmail, process.env.mymail), 300);
@@ -115,7 +114,7 @@ exports.run = async function () {
         await wait(page.select(query.subj, query.subjEng), 600);
 
         // 지난 학습 보기
-        await wait(page.click(query.prevSwitch), 600);
+        await wait(page.click(query.prevSwitch), 1000);
         for (; await page.$(query.td10th) == null; await aSleep(400)); // 목록 load 대기
 
         // 항목 표시 -> '100'
@@ -140,74 +139,96 @@ exports.run = async function () {
         const explains  = [];
 
         let i = 1;
+        let question = '';
+        // let answer = '';
 
+        const n = [ null, '①', '②', '③', '④', '⑤' ];
+
+        values.pop(); // 처음 두 문제는 제외
         for (const value of values.reverse()) {
 
             const link = `https://benedu.co.kr/StudentStudy/Commentary?id=${value.slice(0,-6)}%7Be%7D%7Be%7D&value=ymWuGYYSOfmJLRPkt3xlfw%7Be%7D%7Be%7D&type=0`;
-            await page.goto(link, { waitUntil: 'networkidle2' });
+            await page.goto(link, { waitUntil: 'domcontentloaded' });
 
-            let question = `${i++}. `;
-            // let answer = '';
+            for (let j = 1; j <= 2; console.log('ok'), questions.push(question), j++, i++) { // 문제 1, 2
 
-            let childCount = await page.$eval('#QUESTION_1 > div:nth-child(2)', el => el.childElementCount);
+                question = `${i}. `;
+                console.log(question);
+    
+                let childCount = await page.$eval(`#QUESTION_${j} > div:nth-child(2)`, el => el.childElementCount);
 
-            for (let i = 1; i <= childCount; i++) {
-                const obj = await page.$eval(`#QUESTION_1 > div:nth-child(2) > :nth-child(${i})`, c => {
-                    return { tagName: c.tagName, innerHTML: c.innerHTML, textContent: c.textContent };
-                }); // elem-child
+                for (let k = 1; k <= childCount; k++) {
 
-                if (obj.tagName == 'TABLE') console.log(obj);
+                    const obj = await page.$eval(`#QUESTION_${j} > div:nth-child(2) > :nth-child(${k})`, c => {
+                        console.log(c)
+                        return { tagName: c.tagName, innerHTML: c.innerHTML, textContent: c.textContent };
+                    }); // elem-child
+
+                    if (obj.textContent == '') continue;
+
+                    // // 기존 selector에 table 없으면 여기로 -- #TestBody > div > div > div:nth-child(1) > table
+
+                    if (i==36) console.log(obj)
+
+                    obj.innerHTML = obj.innerHTML
+                        .split('<span style="text-decoration:underline;">').join('')
+                        .split('<span class="WrongCheck">').join('')
+                        .split('</span>').join('');
+
+                    if (obj.tagName == 'P') {
+                        // 1번. 다음 빈칸에 들어갈 말로 가장 적절한 것은?
+                        if (obj.innerHTML.includes('번</b>')) {
+                            question += obj.innerHTML.split('&nbsp;')[1] + '\n';
+                        }
+
+                        // ① ② ③ ④ ⑤
+                        else {
+                            let l = obj.textContent;
+                            if (l.slice(-1) == ' ' || l.slice(-1) == '\xa0') l = l.slice(0, -1);
+                            question += l + '\n';
+
+                            // 정답
+                            if (obj.innerHTML.includes('AnswerCheck')) {
+                                let ld = obj.textContent.slice(0, 1);
+                                answers.push(n.indexOf(ld));
+                            }
+                        }
+                    }
+
+                    else if (obj.tagName == 'TABLE') {
+                        let l = obj.innerHTML;
+
+                        while (l.slice(0, 6) == '&nbsp;') l = l.slice(6);
+
+                        console.log('i==',i)
+                        if (i==36) console.log(l);
+
+                        l = l.split('<span class="AnswerCheck">').join('')
+                             .replace(/&nbsp;/g, '_'.repeat(3))
+                             .split('<p></p>').join('').split(/<p>|<\/p>/).slice(1, -1)
+                             .join('\n')
+                             .replace(/_ \(/g, '_(')
+                             .replace(/<p style="text-align:center;"><span style="">/g, '\n' + ' '.repeat(10))
+                             .replace(/ \*/g, '\n*');
+
+                        while (l.slice(0, 6) == '______') l = l.slice(6);
+
+                        question += '  ' + l + '\n\n';
+                    }
+                }
             }
+        }
 
-            console.log('=========================================');
-            
-            await page.screenshot({ path: './benedu.png', fullPage: true });
-        };
+        console.log('writing...');
+        fs.writeFileSync('./questions.txt', answers.join(' ') + '\n\n\n\n' + questions.join('\n\n\n\n'), { encoding: 'utf-8' });
+        console.log('writing done');
 
-        // await page.click(query.title);
+        // 베네듀는 자동로그아웃됨
 
-        // await replaceTxtValue(page, title);
-        // await page.keyboard.press('Tab');
-        // await replaceTxtValue(page, desc);
-        // await page.keyboard.press('Tab');
-
-        // // add terms
-        // // *login doesn't use getFocusedValue check: working use of page.type than page.keyboard.type
-        // for (let i = 0; i < terms.length; i++) {
-        //     await addTerm(page, terms[i], defs[i]);
-        //     if (await getFocusedName(page) == '+ Add card') await page.keyboard.press('Enter');
-        // }
-
-        // console.log('words added');
-
-        // await page.click(query.createSet);
-
-        // console.log('saving...');
-        // await page.waitForSelector(query.urlbox);
-
-        // console.log('created set');
-        // let url = page.url().slice(0, -5);
-        // console.log('-'.repeat(url.length));
-        // console.log('Link to created set:');
-        // console.log(url);
-        // console.log('-'.repeat(url.length));
-
-        // await page.click(query.toCorF);
-        // await page.click(query.selectToFolder);
-        // await page.click(query.addtoFolder);
-
-        // await page.keyboard.press('Escape');
-        // await aSleep(1000); // wait for modal extinguish
-
-        // console.log('added set to folder 워드마스터');
-
-        // await logout(page);
-        
-        // // finish
-        
-        // await browser.close();
-        // console.log('closed browser');
-        // rmChromeData(5, 800, 15000, true);
+        // finish
+        await browser.close();
+        console.log('closed browser');
+        rmChromeData(5, 800, 15000, true);
     }
     
     catch (err) {

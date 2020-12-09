@@ -4,3 +4,4 @@ stash
 *.env
 *.png
 *.log
+*.txt
