@@ -132,7 +132,9 @@ async function replaceTxtValue(page, newValue) {
     while (await getFocusedValue(page) != newValue) await page.keyboard.type(newValue);
 }
 
-// npm run head
+function wait(command, timeout) {
+    return Promise.all([ command, aSleep(timeout) ]);
+}
 
 const query = { // Object for fetching selector values
 
@@ -144,32 +146,14 @@ const query = { // Object for fetching selector values
 
     userInfo: '#navbar-container ul > li.light-blue.dropdown-modal > a > span',
 
-    // openLogin: 'div.UIModalBody > form > div.SignupWithEmailForm-belowForm > div.UIDiv.SignupWithEmailForm-alreadyHaveAccount > span > span > button',
-    // loginbtn: 'div.UIModalBody > form > button',
-    // reSignin: 'span.SiteHeader-signInBtn',
-
-    // id: '#username',
-    // pwd: '#password',
-
-    // rmAutosaved: 'div > div.UINotification-content > div.UINotification-actions > div > button',
-
-    // title: '#SetPageTarget > div > div.CreateSetHeader > div:nth-child(2) > div > div.CreateSetHeader-textarea.CreateSetHeader-title > div > label > div > div > div.AutoExpandTextarea-wrapper > textarea',
-    // desc: 'div.CreateSetHeader-textarea.CreateSetHeader-description textarea',
-
-    // addCard: '#addRow > span > button',
-
-    // createSet: '#SetPageTarget > div > div.CreateSetPage-container > div > div > div.CreateSetPage-footer > div > button',
-    // urlbox: 'div.ShareModalOptions-textarea textarea.UITextarea-textarea', // textarea of set url (though unused)
-
-    // toCorF: 'div.UIModalBody > div:nth-child(3) > button', // add to class or folder
-    // selectToFolder: 'div.UIToggle > span:nth-child(2)',
-    // createNewFolder: 'div.UIDiv.SaveSetModal-createButton button.UILinkButton',
-    // addtoFolder: 'input.UISwitch-input',
-
-    // usrhead: 'img.Image-image',
-    // logout: '.SiteHeader-logoutLink button.UILink',
-    // seller: 'div.UpsellModal'
+    // prevSwitch: '#chkFINISHED_YN',
+    prevSwitch: 'div.main-content div.page-content div.form-group > div:nth-child(2) li > div:nth-child(1) > label',
+    subj: '#Subject-select',
+    subjEng: 'eAw5Wkv6E92IkZ3O2gUo3w{e}{e}',
+    tr1: '#TaskList-table > tbody > tr:nth-child(1)'
 };
+
+// npm run head
 
 exports.run = async function () {
     
@@ -189,26 +173,37 @@ exports.run = async function () {
         await page.waitForNavigation({ waitUntil: 'networkidle2' });
         console.log('connected');
 
-        try {
+        try
+        {
             await page.waitForSelector(query.loginDiv, { timeout: 800 });
+            
+            await wait(page.type(query.loginEmail, process.env.mymail), 300);
+            await wait(page.type(query.loginPd,    process.env.mypd),   300);
+            await page.click(query.loginBtn);
+
+            // From https://stackoverflow.com/a/58451235
+            page.waitForRequest(req => req.url().includes('StudentHome') && req.method() === 'GET');
+            console.log('logged in');
         }
+
         catch {
             console.log('already logged in');
-            // await logout(page);
-            await page.goto('https://benedu.co.kr/StudentHome', { waitUntil: 'networkidle2' });
-            console.log('goto /StudentHome');
         }
 
-        await page.type(query.loginEmail,   process.env.mymail  );
-        await page.type(query.loginPd,      process.env.mypd    );
+        // await page.goto('https://benedu.co.kr/StudentStudy/TaskList', { waitUntil: 'networkidle2' });
+        await page.goto('https://benedu.co.kr/StudentStudy/TaskList');
+        console.log('goto /StudentStudy/TaskList');
 
-        await page.click(query.loginBtn);
+        await page.waitForSelector(query.prevSwitch);
 
-        await page.waitForSelector(query.userInfo, { timeout: 10000 });
+        await wait(page.select(query.subj, query.subjEng),  600);
+        await wait(page.click(query.prevSwitch),            1000);
+        console.log('switched subj prev');
+
+        // await page.waitForSelector(query.tr1).then(r=>console.log(r));
+        // await page.waitForRequest(req => console.log(req));
+
         await page.screenshot({ path: './benedu.png', fullPage: true });
-
-        console.log('logged in');
-
         // await page.click(query.title);
 
         // await replaceTxtValue(page, title);
