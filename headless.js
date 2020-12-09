@@ -49,7 +49,7 @@ function getHeadlessOptions() {
             '--disable-dev-shm-usage',
             '--no-zygote',
             '--use-gl=swiftshader',
-            'https://quizlet.com/create-set',
+            'https://benedu.co.kr/',
             '--mute-audio',
             '--no-first-run',
             '--disable-infobars',
@@ -79,87 +79,26 @@ async function addTerm(page, word, def) {
     console.log(log);
 }
 
-const query = { // Object for fetching selector values
-
-    openLogin: 'div.UIModalBody > form > div.SignupWithEmailForm-belowForm > div.UIDiv.SignupWithEmailForm-alreadyHaveAccount > span > span > button',
-    loginbtn: 'div.UIModalBody > form > button',
-    reSignin: 'span.SiteHeader-signInBtn',
-
-    id: '#username',
-    pwd: '#password',
-
-    rmAutosaved: 'div > div.UINotification-content > div.UINotification-actions > div > button',
-
-    title: '#SetPageTarget > div > div.CreateSetHeader > div:nth-child(2) > div > div.CreateSetHeader-textarea.CreateSetHeader-title > div > label > div > div > div.AutoExpandTextarea-wrapper > textarea',
-    desc: 'div.CreateSetHeader-textarea.CreateSetHeader-description textarea',
-
-    addCard: '#addRow > span > button',
-
-    createSet: '#SetPageTarget > div > div.CreateSetPage-container > div > div > div.CreateSetPage-footer > div > button',
-    urlbox: 'div.ShareModalOptions-textarea textarea.UITextarea-textarea', // textarea of set url (though unused)
-
-    toCorF: 'div.UIModalBody > div:nth-child(3) > button', // add to class or folder
-    selectToFolder: 'div.UIToggle > span:nth-child(2)',
-    createNewFolder: 'div.UIDiv.SaveSetModal-createButton button.UILinkButton',
-    addtoFolder: 'input.UISwitch-input',
-
-    usrhead: 'img.Image-image',
-    logout: '.SiteHeader-logoutLink button.UILink',
-    seller: 'div.UpsellModal'
-};
-
-// tester faux set
-const title = 'Biology - Chapter 22: Evolution';
-const desc = 'Add a description';
-
-// tester terms
-const terms = [
-    'Alliteration',
-    'Allusion',
-    'Bill of Rights',
-    'Base',
-    'Culture',
-    'Cytoplasm',
-    'Diffusion',
-    'DNA',
-    'Element',
-    'Energy'
-];
-
-// tester defs
-const defs = [
-    'Repetition of initial consonant sounds',
-    'A reference to another work of literature, person, or event',
-    'The first ten amendments to the Constitution',
-    'A substance that decreases the hydrogen ion concentration in a solution.',
-    'Beliefs, customs, and traditions of a specific group of people.',
-    'A jellylike fluid inside the cell in which the organelles are suspended',
-    'Movement of molecules from an area of higher concentration to an area of lower concentration.',
-    'A complex molecule containing the genetic information that makes up the chromosomes.',
-    'A pure substance made of only one kind of atom',
-    'the ability to do work'
-];
-
 async function shoo(page) {
-    let shooed = 'shoo!';
-    page.$(query.seller).then(n => shooed = n);
+    // let shooed = 'shoo!';
+    // page.$(query.seller).then(n => shooed = n);
 
-    await page.keyboard.press('Escape');
-    while (shooed != null) {
-        console.log('shoo!');
-        page.$(query.seller).then(n => shooed = n);
-        await aSleep(500); // wait for modal extinguish
-    }
+    // await page.keyboard.press('Escape');
+    // while (shooed != null) {
+    //     console.log('shoo!');
+    //     page.$(query.seller).then(n => shooed = n);
+    //     await aSleep(500); // wait for modal extinguish
+    // }
 }
 
 async function logout(page) {
-    await shoo(page);
-    await page.click(query.usrhead);
-    await page.click(query.logout);
-    console.log('pending for logout');
+    // await shoo(page);
+    // await page.click(query.usrhead);
+    // await page.click(query.logout);
+    // console.log('pending for logout');
 
-    await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 5000 });
-    console.log('logged out');
+    // await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 5000 });
+    // console.log('logged out');
 }
 
 function aSleep(milliseconds) {
@@ -195,82 +134,125 @@ async function replaceTxtValue(page, newValue) {
 
 // npm run head
 
+const query = { // Object for fetching selector values
+
+    loginDiv: 'div form div.login-buttons',
+
+    loginEmail: '#loginID',
+    loginPd: '#loginPW',
+    loginBtn: 'div form div.login-buttons > button:nth-child(1)',
+
+    userInfo: '#navbar-container ul > li.light-blue.dropdown-modal > a > span',
+
+    // openLogin: 'div.UIModalBody > form > div.SignupWithEmailForm-belowForm > div.UIDiv.SignupWithEmailForm-alreadyHaveAccount > span > span > button',
+    // loginbtn: 'div.UIModalBody > form > button',
+    // reSignin: 'span.SiteHeader-signInBtn',
+
+    // id: '#username',
+    // pwd: '#password',
+
+    // rmAutosaved: 'div > div.UINotification-content > div.UINotification-actions > div > button',
+
+    // title: '#SetPageTarget > div > div.CreateSetHeader > div:nth-child(2) > div > div.CreateSetHeader-textarea.CreateSetHeader-title > div > label > div > div > div.AutoExpandTextarea-wrapper > textarea',
+    // desc: 'div.CreateSetHeader-textarea.CreateSetHeader-description textarea',
+
+    // addCard: '#addRow > span > button',
+
+    // createSet: '#SetPageTarget > div > div.CreateSetPage-container > div > div > div.CreateSetPage-footer > div > button',
+    // urlbox: 'div.ShareModalOptions-textarea textarea.UITextarea-textarea', // textarea of set url (though unused)
+
+    // toCorF: 'div.UIModalBody > div:nth-child(3) > button', // add to class or folder
+    // selectToFolder: 'div.UIToggle > span:nth-child(2)',
+    // createNewFolder: 'div.UIDiv.SaveSetModal-createButton button.UILinkButton',
+    // addtoFolder: 'input.UISwitch-input',
+
+    // usrhead: 'img.Image-image',
+    // logout: '.SiteHeader-logoutLink button.UILink',
+    // seller: 'div.UpsellModal'
+};
+
 exports.run = async function () {
     
     // const browser = await puppeteer.launch(getHeadlessOptions());
-    const browser = await puppeteer.launch();
+
+    // const browser = await puppeteer.launch({ args: ['https://benedu.co.kr/'] });
+
+    const browser = await puppeteer.launch({ headless: false, args: ['https://benedu.co.kr/'] });
+
     const [page] = await browser.pages();
 
-    try {
+    try
+    {
         await enableStealth(page);
         console.log('prepared');
 
-        await page.goto('https://quizlet.com/create-set', { waitUntil : 'networkidle2' });
+        await page.waitForNavigation({ waitUntil: 'networkidle2' });
         console.log('connected');
 
         try {
-            await page.waitForSelector(query.openLogin, { timeout: 800 });
+            await page.waitForSelector(query.loginDiv, { timeout: 800 });
         }
         catch {
             console.log('already logged in');
-            await logout(page);
-            await page.goto('https://quizlet.com/create-set', { waitUntil: 'networkidle2' });
-            console.log('restart goto page');
+            // await logout(page);
+            await page.goto('https://benedu.co.kr/StudentHome', { waitUntil: 'networkidle2' });
+            console.log('goto /StudentHome');
         }
 
-        await page.click(query.openLogin);
-        await page.type(query.id,   process.env.quizletusn);
-        await page.type(query.pwd,  process.env.quizletpwd);
+        await page.type(query.loginEmail,   process.env.mymail  );
+        await page.type(query.loginPd,      process.env.mypd    );
 
-        await page.click(query.loginbtn);
-        await page.waitForNavigation({ waitUntil: 'networkidle2' });
+        await page.click(query.loginBtn);
+
+        await page.waitForSelector(query.userInfo, { timeout: 10000 });
+        await page.screenshot({ path: './benedu.png', fullPage: true });
 
         console.log('logged in');
-        await page.keyboard.press('Escape');
-        await shoo(page);
 
-        await page.click(query.title);
+        // await page.click(query.title);
 
-        await replaceTxtValue(page, title);
-        await page.keyboard.press('Tab');
-        await replaceTxtValue(page, desc);
-        await page.keyboard.press('Tab');
+        // await replaceTxtValue(page, title);
+        // await page.keyboard.press('Tab');
+        // await replaceTxtValue(page, desc);
+        // await page.keyboard.press('Tab');
 
-        // add terms
-        // *login doesn't use getFocusedValue check: working use of page.type than page.keyboard.type
-        for (let i = 0; i < terms.length; i++) {
-            await addTerm(page, terms[i], defs[i]);
-            if (await getFocusedName(page) == '+ Add card') await page.keyboard.press('Enter');
-        }
+        // // add terms
+        // // *login doesn't use getFocusedValue check: working use of page.type than page.keyboard.type
+        // for (let i = 0; i < terms.length; i++) {
+        //     await addTerm(page, terms[i], defs[i]);
+        //     if (await getFocusedName(page) == '+ Add card') await page.keyboard.press('Enter');
+        // }
 
-        console.log('words added');
+        // console.log('words added');
 
-        await page.click(query.createSet);
+        // await page.click(query.createSet);
 
-        console.log('saving...');
-        await page.waitForSelector(query.urlbox);
+        // console.log('saving...');
+        // await page.waitForSelector(query.urlbox);
 
-        console.log('created set');
-        let url = page.url().slice(0, -5);
-        console.log('-'.repeat(url.length));
-        console.log('Link to created set:');
-        console.log(url);
-        console.log('-'.repeat(url.length));
+        // console.log('created set');
+        // let url = page.url().slice(0, -5);
+        // console.log('-'.repeat(url.length));
+        // console.log('Link to created set:');
+        // console.log(url);
+        // console.log('-'.repeat(url.length));
 
-        await page.click(query.toCorF);
-        await page.click(query.selectToFolder);
-        await page.click(query.addtoFolder);
+        // await page.click(query.toCorF);
+        // await page.click(query.selectToFolder);
+        // await page.click(query.addtoFolder);
 
-        await page.keyboard.press('Escape');
-        await aSleep(1000); // wait for modal extinguish
+        // await page.keyboard.press('Escape');
+        // await aSleep(1000); // wait for modal extinguish
 
-        console.log('added set to folder 워드마스터');
+        // console.log('added set to folder 워드마스터');
 
-        await logout(page);
+        // await logout(page);
         
-        await browser.close();
-        console.log('closed browser');
-        rmChromeData(5, 800, 15000, true);
+        // // finish
+        
+        // await browser.close();
+        // console.log('closed browser');
+        // rmChromeData(5, 800, 15000, true);
     }
     
     catch (err) {

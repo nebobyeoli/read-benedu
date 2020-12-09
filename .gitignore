@@ -1,2 +1,4 @@
 node_modules
+stash
 *.env
+*.png
