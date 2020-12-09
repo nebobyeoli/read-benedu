@@ -1,19 +1,8 @@
-// Note: quizletusn and quizletpwd MUST BE REPLACED on usage
-
 const fs = require('fs');
 const puppeteer = require('puppeteer');
 require('dotenv').config();
 
-function getChromePath() {
-    let chromePath;
-    if      (process.platform == 'win32')   chromePath = 'c:/program files (x86)/google/chrome/application/chrome.exe';
-    else if (process.platform == 'linux')   chromePath = '/usr/bin/google-chrome';
-    else                                    chromePath = '/library/application support/google/chrome';
-    return chromePath;
-}
-
 function rmChromeData(maxRetries, retryDelay, timeout, exitonCompletion) {
-    
     console.log('removing chromeData temp folder...');
 
     fs.rmdir('chromeData', {
@@ -30,110 +19,26 @@ function rmChromeData(maxRetries, retryDelay, timeout, exitonCompletion) {
     setTimeout(() => { console.log('remove failed'); process.exit(); }, timeout);
 }
 
-// unused: default puppeteer.launch(without options)
-// is a perfect headless...?
-// better performance results than using the options below?
-function getHeadlessOptions() {
-    return {
-        executablePath: getChromePath(),
-        headless: true,
-        ignoreDefaultArgs: true,
-        devtools: false,
-        dumpio: true,
-        defaultViewport: { width: 1280, height: 882 },
-        args: [
-            '--incognito',
-            '--disable-canvas-aa',
-            '--disable-2d-canvas-clip-aa',
-            '--disable-gl-drawing-for-tests',
-            '--disable-dev-shm-usage',
-            '--no-zygote',
-            '--use-gl=swiftshader',
-            'https://benedu.co.kr/',
-            '--mute-audio',
-            '--no-first-run',
-            '--disable-infobars',
-            '--disable-breakpad',
-            '--window-size=100,100',
-            '--user-data-dir=./chromeData/temp',
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-extensions',
-            '--disable-translate'
-        ]
-    };
-}
-
-async function addTerm(page, word, def) {
-
-    let log = '';
-
-    await replaceTxtValue(page, word);
-    log += await getFocusedValue(page) + '\t';
-    await page.keyboard.press('Tab');
-    
-    await replaceTxtValue(page, def);
-    log += await getFocusedValue(page) + '\t';
-    await page.keyboard.press('Tab');
-
-    console.log(log);
-}
-
-async function shoo(page) {
-    // let shooed = 'shoo!';
-    // page.$(query.seller).then(n => shooed = n);
-
-    // await page.keyboard.press('Escape');
-    // while (shooed != null) {
-    //     console.log('shoo!');
-    //     page.$(query.seller).then(n => shooed = n);
-    //     await aSleep(500); // wait for modal extinguish
-    // }
-}
-
-async function logout(page) {
-    // await shoo(page);
-    // await page.click(query.usrhead);
-    // await page.click(query.logout);
-    // console.log('pending for logout');
-
-    // await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 5000 });
-    // console.log('logged out');
-}
-
 function aSleep(milliseconds) {
-    return new Promise(r => setTimeout(r, milliseconds));
-}
-
-function getFocused(node) {
-    if (node.focused) return node;
-    for (const child of node.children || []) {
-        const focusedNode = getFocused(child);
-        if (focusedNode) return focusedNode;
-    }
-}
-
-async function getFocusedName(page) {
-    let focus = getFocused(await page.accessibility.snapshot());
-    return focus ? focus.name : null;
-}
-
-async function getFocusedValue(page) {
-    let focus = getFocused(await page.accessibility.snapshot());
-    return focus ? focus.value : null;
-}
-
-async function replaceTxtValue(page, newValue) {
-    if (await getFocusedValue(page)) {
-        await page.keyboard.down('Control');
-        await page.keyboard.press('KeyA');
-        await page.keyboard.up('Control');
-    }
-    while (await getFocusedValue(page) != newValue) await page.keyboard.type(newValue);
+    return new Promise(res => setTimeout(res, milliseconds)); // res = resolve
 }
 
 function wait(command, timeout) {
     return Promise.all([ command, aSleep(timeout) ]);
+}
+
+async function rmValue(page, selector) {
+    await page.click(selector);
+    await page.keyboard.down('Control');
+    await page.keyboard.press('KeyA');
+    await page.keyboard.up('Control');
+    await page.keyboard.press('Delete');
+}
+
+async function screenshot(page, imgname='benedu') {
+    console.log('screenshot...');
+    await page.screenshot({ path: `./${imgname}.png`, fullPage: false});
+    console.log('screenshot');
 }
 
 const query = { // Object for fetching selector values
@@ -147,6 +52,7 @@ const query = { // Object for fetching selector values
     subj: '#Subject-select',
     subjEng: 'eAw5Wkv6E92IkZ3O2gUo3w{e}{e}',
     prevSwitch: 'div.main-content div.page-content div.form-group > div:nth-child(2) li > div:nth-child(1) > label',
+    td10th: '#TaskList-table > tbody > tr:nth-child(10)',
     chrowMax: '#TaskList-table_length > label > select',
 
     problemtr: '#TaskList-table > tbody > tr'
@@ -155,52 +61,71 @@ const query = { // Object for fetching selector values
 // npm run head
 
 exports.run = async function () {
-    
-    // const browser = await puppeteer.launch(getHeadlessOptions());
 
-    // const browser = await puppeteer.launch({ args: ['https://benedu.co.kr/'] });
+    const browser = await puppeteer.launch({
+        ignoreDefaultArgs: true,
+        headless: true,
+        devtools: false,
+        defaultViewport: { width: 1280, height: 882 },
+        args: [
+            '--incognito',
+            '--headless',
+            '--no-sandbox',
+            '--disable-gpu',
+            '--user-data-dir=./chromeData/temp',
+            'https://benedu.co.kr/',
+            '--mute-audio',
+            '--no-first-run',
+            '--disable-gl-drawing-for-tests',
+            '--disable-dev-shm-usage',
+            '--disable-extensions',
+            '--no-zygote'
+        ]
+    });
 
-    const browser = await puppeteer.launch({ headless: false, args: ['https://benedu.co.kr/'] });
+    // const browser = await puppeteer.launch({ headless: false, args: ['https://benedu.co.kr/'] });
 
     const [page] = await browser.pages();
+    console.log('connected');
 
     try
     {
         await enableStealth(page);
-        console.log('prepared');
+        console.log('enabled stealth');
 
-        await page.waitForNavigation({ waitUntil: 'networkidle2' });
-        console.log('connected');
+        await page.waitForSelector(query.loginDiv);
+        await page.keyboard.press('Tab');
 
-        try
-        {
-            await page.waitForSelector(query.loginDiv, { timeout: 800 });
-            
-            await wait(page.type(query.loginEmail, process.env.mymail), 300);
-            await wait(page.type(query.loginPd,    process.env.mypd),   300);
-            await page.click(query.loginBtn);
+        if (await page.$eval(query.loginEmail, el => el.value)) await rmValue(page, query.loginEmail);
+        await wait(page.type(query.loginEmail, process.env.mymail), 300);
+        await wait(page.type(query.loginPd,    process.env.mypd),   300);
+        await page.click(query.loginBtn);
 
-            // From https://stackoverflow.com/a/58451235
-            page.waitForRequest(req => req.url().includes('StudentHome') && req.method() === 'GET');
-            console.log('logged in');
-        }
+        // From https://stackoverflow.com/a/58451235
+        // -- NO [await] keyword
+        // page.waitForRequest(req => req.url().includes('StudentHome') && req.method() == 'GET');
 
-        catch {
-            console.log('already logged in');
-        }
+        for (; !page.url().includes('StudentHome'); await aSleep(400));
+        console.log('logged in');
 
-        await page.goto('https://benedu.co.kr/StudentStudy/TaskList');
-        await page.waitForSelector(query.prevSwitch);
+        await wait(page.goto('https://benedu.co.kr/StudentStudy/TaskList', { waitUntil: 'domcontentloaded' }), 600),
         console.log('goto /StudentStudy/TaskList');
 
+        // 시험 과목 -> '영어'
         await wait(page.select(query.subj, query.subjEng), 600);
-        await wait(page.click (query.prevSwitch), 600);
-        await wait(page.select(query.chrowMax, '100'), 200);
+
+        // 지난 학습 보기
+        await wait(page.click(query.prevSwitch), 600);
+        for (; await page.$(query.td10th) == null; await aSleep(400)); // 목록 load 대기
+
+        // 항목 표시 -> '100'
+        await wait(page.select(query.chrowMax, '100'), 600);
         console.log('switched subj prev');
 
         const probList = await page.$$(query.problemtr);
         console.log('stored days:', probList.length);
         
+        // 주소 id 목록 (tr) 저장 -- 일별 2문제마다
         const values = [];
 
         // From https://stackoverflow.com/a/56467778
@@ -211,8 +136,8 @@ exports.run = async function () {
         console.log('pushed problem link ids');
 
         const questions = [];
-        const answers  = [];
-        const explains = [];
+        const answers   = [];
+        const explains  = [];
 
         let i = 1;
 
@@ -227,8 +152,11 @@ exports.run = async function () {
             let childCount = await page.$eval('#QUESTION_1 > div:nth-child(2)', el => el.childElementCount);
 
             for (let i = 1; i <= childCount; i++) {
-                let content = await page.$eval(`#QUESTION_1 > div:nth-child(2) > :nth-child(${i})`, child => [child.tagName, child.textContent]);
-                console.log(content);
+                const obj = await page.$eval(`#QUESTION_1 > div:nth-child(2) > :nth-child(${i})`, c => {
+                    return { tagName: c.tagName, innerHTML: c.innerHTML, textContent: c.textContent };
+                }); // elem-child
+
+                if (obj.tagName == 'TABLE') console.log(obj);
             }
 
             console.log('=========================================');
@@ -284,6 +212,7 @@ exports.run = async function () {
     
     catch (err) {
         console.error(err);
+        await screenshot(page, 'errshot');
         await browser.close();
         rmChromeData(5, 800, 15000, true);
     }

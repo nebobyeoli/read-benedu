@@ -1,4 +1,6 @@
 node_modules
+chromeData
 stash
 *.env
 *.png
+*.log
