@@ -123,7 +123,7 @@ exports.run = async function () {
 
         const probList = await page.$$(query.problemtr);
         console.log('stored days:', probList.length);
-        
+
         // 주소 id 목록 (tr) 저장 -- 일별 2문제마다
         const values = [];
 
@@ -153,7 +153,7 @@ exports.run = async function () {
             for (let j = 1; j <= 2; console.log(i, 'ok'), questions.push(question), j++, i++) { // 문제 1, 2
 
                 question = `${i}. `;
-    
+
                 let childCount = await page.$eval(`#QUESTION_${j} > div:nth-child(2)`, el => el.childElementCount);
 
                 let need2ndTable = false;
@@ -237,7 +237,12 @@ exports.run = async function () {
         }
 
         console.log('writing...');
-        fs.writeFileSync('./questions.txt', `${answers.join(' ')}\n\n\n\n${questions.join('\n\n\n\n')}`, { encoding: 'utf-8' });
+
+        let joinAnswers = '';
+        for (let j = 0; j < answers.length; j += 10) {
+            joinAnswers += answers.slice(j, j + 10).join(' ') + '\n';
+        }
+        fs.writeFileSync('./questions.txt', `${joinAnswers}\n\n\n\n${questions.join('\n\n\n\n')}`, { encoding: 'utf-8' });
         console.log('writing done');
 
         // 베네듀는 자동로그아웃됨
