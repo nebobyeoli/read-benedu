@@ -138,12 +138,12 @@ exports.run = async function () {
         }
         console.log('pushed problem link ids');
 
-        const questions = [];
-        const answers   = [];
-        const explains  = [];
+        const problems = [];
+        const answers  = [];
+        const explains = [];
 
         let i = 1;
-        let question = '';
+        let problem = '';
 
         const n = [ null, '①', '②', '③', '④', '⑤' ];
 
@@ -154,12 +154,12 @@ exports.run = async function () {
         for (const value of values.reverse()) {
 
             const link = `https://benedu.co.kr/StudentStudy/Commentary?id=${value.slice(0,-6)}%7Be%7D%7Be%7D&value=ymWuGYYSOfmJLRPkt3xlfw%7Be%7D%7Be%7D&type=0`;
-            console.log(link)
+            console.log('\n', link);
             await page.goto(link, { waitUntil: 'domcontentloaded' });
 
-            for (let j = 1; j <= 2; console.log(i, 'ok'), questions.push(question), j++, i++) { // 문제 1, 2
+            for (let j = 1; j <= 2; console.log(i, 'ok'), problems.push(problem), j++, i++) { // 문제 1, 2
 
-                question = `${i}. `;
+                problem = `${i}. `;
 
                 let childCount = await page.$eval(`#QUESTION_${j} > div:nth-child(2)`, el => el.childElementCount);
 
@@ -189,7 +189,7 @@ exports.run = async function () {
                         // 1번. 다음 빈칸에 들어갈 말로 가장 적절한 것은?
                         if (obj.innerHTML.includes('번</b>')) {
 
-                            question += obj.innerHTML.split('&nbsp;')[1] + '\n';
+                            problem += obj.innerHTML.split('&nbsp;')[1] + '\n';
 
                             let html = await page.$eval(`#QUESTION_${j} > div:nth-child(2)`, c => c.innerHTML);
                             if (!html.includes('<table'))    need2ndTable   = true;
@@ -201,7 +201,7 @@ exports.run = async function () {
                             let l = obj.textContent;
 
                             if (l.slice(-1) == ' ' || l.slice(-1) == '\xa0') l = l.slice(0, -1);
-                            question += l + '\n';
+                            problem += l + '\n';
 
                             // 정답
                             if (obj.innerHTML.includes('WrongCheck')) {
@@ -248,7 +248,7 @@ exports.run = async function () {
                         while (l.slice(0, 6) == '______') l = l.slice(6);
                         while (l.includes(' \n')) l = l.replace(/ \n/g, ' ');
 
-                        question += '  ' + l + '\n\n';
+                        problem += '  ' + l + '\n\n';
 
                         if (need2ndTable) {
                             need2ndTable = false;
@@ -257,22 +257,22 @@ exports.run = async function () {
                     }
                 }
 
-                question = question.replace(/\n\n① ①번\n② ②번\n③ ③번\n④ ④번\n⑤ ⑤번/g, '')
+                problem = problem.replace(/\n\n① ①번\n② ②번\n③ ③번\n④ ④번\n⑤ ⑤번/g, '')
                     .replace(/① /g, '①').replace(/② /g, '②').replace(/③ /g, '③').replace(/④ /g, '④').replace(/⑤ /g, '⑤')
                     .replace(/①/g, '① ').replace(/②/g, '② ').replace(/③/g, '③ ').replace(/④/g, '④ ').replace(/⑤/g, '⑤ ');
             }
         }
 
-        console.log('writing...');
+        console.log('\nwriting...');
 
         let joinAnswers = '';
         for (let j = 0; j < answers.length; j += 10) {
             joinAnswers += answers.slice(j, j + 10).join(' ') + '\n';
         }
 
-        let joinQuestions = questions.join('\n\n\n\n').replace(/ ___\n/g, '\n').replace(/\n\n___/g, '');
+        let joinProblems = problems.join('\n\n\n\n').replace(/ ___\n/g, '\n').replace(/\n\n___/g, '');
 
-        fs.writeFileSync('./questions.txt', `${joinAnswers}\n\n\n\n${joinQuestions}`, { encoding: 'utf-8' });
+        fs.writeFileSync('./problems.txt', `${values.length} DAYS, ${values.length * 2} PROBLEMS\n\n\n${joinAnswers}\n\n\n\n${joinProblems}`, { encoding: 'utf-8' });
         console.log('writing done');
 
         // 베네듀는 자동로그아웃됨
