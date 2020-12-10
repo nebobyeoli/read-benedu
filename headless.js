@@ -153,7 +153,7 @@ exports.run = async function () {
 
         for (const value of values.reverse()) {
 
-            const link = `https://benedu.co.kr/StudentStudy/Commentary?id=${value.slice(0,-6)}%7Be%7D%7Be%7D&value=ymWuGYYSOfmJLRPkt3xlfw%7Be%7D%7Be%7D&type=0`;
+            const link = `${process.env.front}${value.slice(0,-6)}${process.env.back}`;
             console.log('\n', link);
             await page.goto(link, { waitUntil: 'domcontentloaded' });
 
@@ -297,7 +297,8 @@ exports.run = async function () {
 
                 problem = problem.replace(/\n\n① ①번\n② ②번\n③ ③번\n④ ④번\n⑤ ⑤번/g, '')
                     .replace(/① /g, '①').replace(/② /g, '②').replace(/③ /g, '③').replace(/④ /g, '④').replace(/⑤ /g, '⑤')
-                    .replace(/①/g, '① ').replace(/②/g, '② ').replace(/③/g, '③ ').replace(/④/g, '④ ').replace(/⑤/g, '⑤ ');
+                    .replace(/①/g, '① ').replace(/②/g, '② ').replace(/③/g, '③ ').replace(/④/g, '④ ').replace(/⑤/g, '⑤ ')
+                    .replace(/_ _/g, '__').replace(/\* /g, '*');
             }
         }
 
