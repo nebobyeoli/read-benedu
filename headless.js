@@ -140,45 +140,48 @@ exports.run = async function () {
 
         let i = 1;
         let question = '';
-        // let answer = '';
 
         const n = [ null, '①', '②', '③', '④', '⑤' ];
 
         values.pop(); // 처음 두 문제는 제외
+
         for (const value of values.reverse()) {
 
             const link = `https://benedu.co.kr/StudentStudy/Commentary?id=${value.slice(0,-6)}%7Be%7D%7Be%7D&value=ymWuGYYSOfmJLRPkt3xlfw%7Be%7D%7Be%7D&type=0`;
             await page.goto(link, { waitUntil: 'domcontentloaded' });
 
-            for (let j = 1; j <= 2; console.log('ok'), questions.push(question), j++, i++) { // 문제 1, 2
+            for (let j = 1; j <= 2; console.log(i, 'ok'), questions.push(question), j++, i++) { // 문제 1, 2
 
                 question = `${i}. `;
-                console.log(question);
     
                 let childCount = await page.$eval(`#QUESTION_${j} > div:nth-child(2)`, el => el.childElementCount);
+
+                let need2ndTable = false;
 
                 for (let k = 1; k <= childCount; k++) {
 
                     const obj = await page.$eval(`#QUESTION_${j} > div:nth-child(2) > :nth-child(${k})`, c => {
-                        console.log(c)
                         return { tagName: c.tagName, innerHTML: c.innerHTML, textContent: c.textContent };
                     }); // elem-child
 
                     if (obj.textContent == '') continue;
+                    
+                    if (need2ndTable) {
+                        obj.tagName = 'TABLE';
+                        obj.innerHTML = await page.$eval(`#TestBody > div > div > div:nth-child(${j==1 ? 1 : 3}) > table`, c => c.innerHTML);
+                    }
 
-                    // // 기존 selector에 table 없으면 여기로 -- #TestBody > div > div > div:nth-child(1) > table
-
-                    if (i==36) console.log(obj)
-
-                    obj.innerHTML = obj.innerHTML
-                        .split('<span style="text-decoration:underline;">').join('')
-                        .split('<span class="WrongCheck">').join('')
-                        .split('</span>').join('');
+                    obj.innerHTML = obj.innerHTML.replace(/\xa0/g, ' ')
+                        .replace(/<span style="text-decoration:underline;">|<\/span>|<span class="WrongCheck">/g, '');
 
                     if (obj.tagName == 'P') {
                         // 1번. 다음 빈칸에 들어갈 말로 가장 적절한 것은?
                         if (obj.innerHTML.includes('번</b>')) {
                             question += obj.innerHTML.split('&nbsp;')[1] + '\n';
+
+                            if (!(await page.$eval(`#QUESTION_${j} > div:nth-child(2)`, c => c.innerHTML)).includes('<table')) {
+                                need2ndTable = true;
+                            }
                         }
 
                         // ① ② ③ ④ ⑤
@@ -195,32 +198,46 @@ exports.run = async function () {
                         }
                     }
 
-                    else if (obj.tagName == 'TABLE') {
-                        let l = obj.innerHTML;
+                    else if (obj.tagName == 'TABLE' || need2ndTable) {
+
+                        // -- 기존 selector에 table 없으면 여기로
+                        //1-- #TestBody > div > div > div:nth-child(1) > table
+                        //2-- #TestBody > div > div > div:nth-child(3) > table
+
+                        let l;
+                        if (need2ndTable)   l = await page.$eval(`#TestBody > div > div > div:nth-child(${j==1 ? 1 : 3}) > table`, c => c.innerHTML);
+                        else                l = obj.innerHTML;
 
                         while (l.slice(0, 6) == '&nbsp;') l = l.slice(6);
 
-                        console.log('i==',i)
-                        if (i==36) console.log(l);
-
-                        l = l.split('<span class="AnswerCheck">').join('')
+                        l = l.replace(/\n&nbsp;/g, '\n ').replace(/\n &nbsp;/g, '\n  ')
+                             .replace(/<span class="AnswerCheck">/g, '')
                              .replace(/&nbsp;/g, '_'.repeat(3))
-                             .split('<p></p>').join('').split(/<p>|<\/p>/).slice(1, -1)
-                             .join('\n')
-                             .replace(/_ \(/g, '_(')
+                             .replace(/<p><\/p>/g, '').split(/<p>|<\/p>/).slice(1, -1).join('\n')
+                             .replace(/_  /g, '_ ').replace(/  _/g, ' _')
+                             .replace(/_ \(A\)/g, '_(A)').replace(/_ \(B\)/g, '_(B)').replace(/_ \(C\)/g, '_(C)')
                              .replace(/<p style="text-align:center;"><span style="">/g, '\n' + ' '.repeat(10))
-                             .replace(/ \*/g, '\n*');
+                             .replace(/ \*/g, '\n*')
+                             .replace(/<span style="text-decoration:underline;">|<span style="font-style:italic;">|<\/span>/g, '')
+                             .replace(/\n\(/g, '\n  (')
+                             .replace(/\n______/g, '\n  ');
 
                         while (l.slice(0, 6) == '______') l = l.slice(6);
+                        while (l.includes(' \n')) l = l.replace(/ \n/g, ' ');
 
                         question += '  ' + l + '\n\n';
+                        need2ndTable = false;
                     }
                 }
+
+                question = question.replace(/\n\n① ①번\n② ②번\n③ ③번\n④ ④번\n⑤ ⑤번/g, '')
+                    .replace(/① /g, '①').replace(/② /g, '②').replace(/③ /g, '③').replace(/④ /g, '④').replace(/⑤ /g, '⑤')
+                    .replace(/①/g, '① ').replace(/②/g, '② ').replace(/③/g, '③ ').replace(/④/g, '④ ').replace(/⑤/g, '⑤ ');
             }
         }
 
         console.log('writing...');
-        fs.writeFileSync('./questions.txt', answers.join(' ') + '\n\n\n\n' + questions.join('\n\n\n\n'), { encoding: 'utf-8' });
+        fs.writeFileSync('./questions.txt', `${answers.join(' ')}\n\n\n\n${questions.join('\n\n\n\n')}`, { encoding: 'utf-8' });
         console.log('writing done');
 
         // 베네듀는 자동로그아웃됨
