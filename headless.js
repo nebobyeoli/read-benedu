@@ -114,7 +114,7 @@ exports.run = async function () {
         const values = [];
 
         // 시험 과목 -> '영어'
-        await wait(page.select(query.subj, query.subjEng), 600);
+        await wait(page.select(query.subj, query.subjEng), 1400);
 
         const recent = await page.$$eval(query.problemtr, el => el.map(x => x.getAttribute('value')));
         recent.forEach(v => values.push(v));
@@ -171,26 +171,36 @@ exports.run = async function () {
                 ////// GET EXPLANATIONS
 
                 // mostly regex replace formatting jobs...
-                
+
                 let spli = await page.$eval(`#QUESTION_${j} > div.alert-success`, el => el.innerText);
-                let hasCultureNote = false;
+
+                let culture_note = false; // has culture note
 
                 spli = spli.replace(/\xa0/g, ' ');
-                if (spli.includes('Culture Note')) hasCultureNote = true;
+                if (spli.includes('Culture Note')) culture_note = true;
+                let solCount = spli.match(/Solution Guide/g || []).length;
 
                 do { spli = spli.replace(/\n\n| \n/g, '\n') } while (spli.includes('\n\n'));
                 spli = spli.split(/\[정답\/모범답안\]|\[해설\]|\n/g).slice(1, -1).filter(v => v != '')
                     .map(str => str.replace(/^{|}$|^\||\|$|^\u25a0|^\s/g, '').replace(/^ | $/g, '')).join('\n')
-                    .split(/소재|해석|Culture Note|Solution Guide|Structure in Focus/gi).map(str => str.replace(/^\n|\n$|^ | $/g, ''));
+                    .split(/소재|해석|Culture Note|Solution Guide|Structure in Focus/gi).map(str => str.replace(/^\n|\n$|^ | $|\n | \n/g, ''));
+
+                let solution_guide = spli[culture_note?4:3];
+                for (let k = 1; k < solCount; k++) solution_guide += '\n' + spli[k + culture_note?4:3];
 
                 let explain = `${i}번\n정답\t${spli[0]}\n소재\t${spli[1]}\n\n해석\n  ${spli[2]}\n\n`;
-                if (hasCultureNote) explain += `Culture Note\n${spli[3]}\n\nSolution Guide\n${spli[4]}\n\nStructure in Focus\n${spli[5]}`;
-                else                explain += `Solution Guide\n${spli[3]}\n\nStructure in Focus\n${spli[4]}`;
+                if (culture_note) explain += `Culture Note\n${spli[3]}\n\nSolution Guide\n${solution_guide}\n\nStructure in Focus\n${spli[5 + solCount-1]}`;
+                else              explain += `Solution Guide\n${solution_guide}\n\nStructure in Focus\n${spli[4 + solCount-1]}`;
 
                 explain = explain.replace(/\n  \n/g, '\n')
                 .replace(/\n\(A\)/g, '\n  (A)').replace(/\n\(B\)/g, '\n  (B)').replace(/\n\(C\)/g, '\n  (C)').replace(/\n\(D\)/g, '\n  (D)')
-                .replace(/\n | \n/g, '').split('Structure in Focus');
-                explain = `${explain[0]}Structure in Focus\n${explain[1].replace(/\n/g, ' ').slice(1).replace(/\. /g, '.\n')}`;
+                .split(/Solution Guide|Structure in Focus/gi);
+
+                explain = `${explain[0]}Solution Guide\n${explain[1].replace(/\n/g, ' ').slice(1,-1).replace(/\. /g, '.\n')}\nStructure in Focus${explain[2]}`;
+                explain = explain.replace(/ ①/g, '\n①').replace(/ ②/g, '\n②').replace(/ ③/g, '\n③').replace(/ ④/g, '\n④').replace(/ ⑤/g, '\n⑤');
+
+                if (!explain.match(/\n\nSolution Guide/gi))     explain = explain.replace(/Solution Guide/gi,     '\nSolution Guide');
+                if (!explain.match(/\n\nStructure in Focus/gi)) explain = explain.replace(/Structure in Focus/gi, '\nStructure in Focus');
 
                 explains.push(explain);
 
@@ -203,7 +213,7 @@ exports.run = async function () {
                     }); // elem-child
 
                     if (obj.textContent == '') continue;
-                    
+
                     if (need2ndTable) {
                         obj.tagName = 'TABLE';
                         obj.innerHTML = await page.$eval(`#TestBody > div > div > div:nth-child(${j==1 ? 1 : 3}) > table`, c => c.innerHTML);
@@ -314,7 +324,7 @@ exports.run = async function () {
         console.log('closed browser');
         rmChromeData(5, 800, 15000, true);
     }
-    
+
     catch (err) {
         console.error(err);
         await screenshot(page, 'errshot');
