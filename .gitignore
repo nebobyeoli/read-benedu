@@ -1,7 +1,7 @@
 node_modules
 chromeData
 stash
+output
 *.env
 *.png
 *.log
-*.txt

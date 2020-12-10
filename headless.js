@@ -121,7 +121,7 @@ exports.run = async function () {
         console.log('stored days (latest):', recent.length);
 
         // 지난 학습 보기
-        await wait(page.click(query.prevSwitch), 1000);
+        await wait(page.click(query.prevSwitch), 2000);
         for (; await page.$(query.td10th) == null; await aSleep(400)); // 목록 load 대기
         console.log('switched subj prev');
 
@@ -157,16 +157,44 @@ exports.run = async function () {
             console.log('\n', link);
             await page.goto(link, { waitUntil: 'domcontentloaded' });
 
-            for (let j = 1; j <= 2; console.log(i, 'ok'), problems.push(problem), j++, i++) { // 문제 1, 2
+            for (let j = 1; j <= 2; console.log(i, 'of', values.length*2, 'done'), problems.push(problem), j++, i++) { // 문제 1, 2
 
                 problem = `${i}. `;
 
                 let childCount = await page.$eval(`#QUESTION_${j} > div:nth-child(2)`, el => el.childElementCount);
 
                 let answerIsTaken = false;
-                let need2ndTable = false;
+                let need2ndTable  = false;
 
                 console.log('childCount:', childCount);
+
+                ////// GET EXPLANATIONS
+
+                // mostly regex replace formatting jobs...
+                
+                let spli = await page.$eval(`#QUESTION_${j} > div.alert-success`, el => el.innerText);
+                let hasCultureNote = false;
+
+                spli = spli.replace(/\xa0/g, ' ');
+                if (spli.includes('Culture Note')) hasCultureNote = true;
+
+                do { spli = spli.replace(/\n\n| \n/g, '\n') } while (spli.includes('\n\n'));
+                spli = spli.split(/\[정답\/모범답안\]|\[해설\]|\n/g).slice(1, -1).filter(v => v != '')
+                    .map(str => str.replace(/^{|}$|^\||\|$|^\u25a0|^\s/g, '').replace(/^ | $/g, '')).join('\n')
+                    .split(/소재|해석|Culture Note|Solution Guide|Structure in Focus/gi).map(str => str.replace(/^\n|\n$|^ | $/g, ''));
+
+                let explain = `${i}번\n정답\t${spli[0]}\n소재\t${spli[1]}\n\n해석\n  ${spli[2]}\n\n`;
+                if (hasCultureNote) explain += `Culture Note\n${spli[3]}\n\nSolution Guide\n${spli[4]}\n\nStructure in Focus\n${spli[5]}`;
+                else                explain += `Solution Guide\n${spli[3]}\n\nStructure in Focus\n${spli[4]}`;
+
+                explain = explain.replace(/\n  \n/g, '\n')
+                .replace(/\n\(A\)/g, '\n  (A)').replace(/\n\(B\)/g, '\n  (B)').replace(/\n\(C\)/g, '\n  (C)').replace(/\n\(D\)/g, '\n  (D)')
+                .replace(/\n | \n/g, '').split('Structure in Focus');
+                explain = `${explain[0]}Structure in Focus\n${explain[1].replace(/\n/g, ' ').slice(1).replace(/\. /g, '.\n')}`;
+
+                explains.push(explain);
+
+                ////// GET PROBLEMS
 
                 for (let k = 1; k <= childCount; k++) {
 
@@ -270,10 +298,14 @@ exports.run = async function () {
             joinAnswers += answers.slice(j, j + 10).join(' ') + '\n';
         }
 
+        let joinExplains = explains.join('\n\n\n\n');
         let joinProblems = problems.join('\n\n\n\n').replace(/ ___\n/g, '\n').replace(/\n\n___/g, '');
 
-        fs.writeFileSync('./problems.txt', `${values.length} DAYS, ${values.length * 2} PROBLEMS\n\n\n${joinAnswers}\n\n\n\n${joinProblems}`, { encoding: 'utf-8' });
-        console.log('writing done');
+        fs.writeFileSync('./output/explains.txt', `빠른 답\n\n${joinAnswers}\n\n해설\n\n${joinExplains}`, { encoding: 'utf-8' });
+        console.log('writing done ./output/explains.txt');
+
+        fs.writeFileSync('./output/problems.txt', `${values.length} DAYS, ${values.length * 2} PROBLEMS\n\n\n\n${joinProblems}`, { encoding: 'utf-8' });
+        console.log('writing done ./output/problems.txt');
 
         // 베네듀는 자동로그아웃됨
 
