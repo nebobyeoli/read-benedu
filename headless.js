@@ -110,27 +110,31 @@ exports.run = async function () {
         await wait(page.goto('https://benedu.co.kr/StudentStudy/TaskList', { waitUntil: 'domcontentloaded' }), 600),
         console.log('goto /StudentStudy/TaskList');
 
+        // 주소 id 목록 (tr) 저장 -- 일별 2문제마다
+        const values = [];
+
         // 시험 과목 -> '영어'
         await wait(page.select(query.subj, query.subjEng), 600);
+
+        const recent = await page.$$eval(query.problemtr, el => el.map(x => x.getAttribute('value')));
+        recent.forEach(v => values.push(v));
+        console.log('stored days (latest):', recent.length);
 
         // 지난 학습 보기
         await wait(page.click(query.prevSwitch), 1000);
         for (; await page.$(query.td10th) == null; await aSleep(400)); // 목록 load 대기
+        console.log('switched subj prev');
 
         // 항목 표시 -> '100'
         await wait(page.select(query.chrowMax, '100'), 600);
-        console.log('switched subj prev');
 
         const probList = await page.$$(query.problemtr);
-        console.log('stored days:', probList.length);
-
-        // 주소 id 목록 (tr) 저장 -- 일별 2문제마다
-        const values = [];
+        console.log('stored days (past):', probList.length);
 
         // From https://stackoverflow.com/a/56467778
         for (const tr of probList) {
-            const value = await page.evaluate(el => el.getAttribute('value'), tr);
-            values.push(value);
+            const v = await page.evaluate(el => el.getAttribute('value'), tr);
+            values.push(v);
         }
         console.log('pushed problem link ids');
 
@@ -145,9 +149,12 @@ exports.run = async function () {
 
         values.pop(); // 처음 두 문제는 제외
 
+        console.log('values.length:', values.length);
+
         for (const value of values.reverse()) {
 
             const link = `https://benedu.co.kr/StudentStudy/Commentary?id=${value.slice(0,-6)}%7Be%7D%7Be%7D&value=ymWuGYYSOfmJLRPkt3xlfw%7Be%7D%7Be%7D&type=0`;
+            console.log(link)
             await page.goto(link, { waitUntil: 'domcontentloaded' });
 
             for (let j = 1; j <= 2; console.log(i, 'ok'), questions.push(question), j++, i++) { // 문제 1, 2
@@ -156,7 +163,10 @@ exports.run = async function () {
 
                 let childCount = await page.$eval(`#QUESTION_${j} > div:nth-child(2)`, el => el.childElementCount);
 
+                let answerIsTaken = false;
                 let need2ndTable = false;
+
+                console.log('childCount:', childCount);
 
                 for (let k = 1; k <= childCount; k++) {
 
@@ -172,28 +182,41 @@ exports.run = async function () {
                     }
 
                     obj.innerHTML = obj.innerHTML.replace(/\xa0/g, ' ')
-                        .replace(/<span style="text-decoration:underline;">|<\/span>|<span class="WrongCheck">/g, '');
+                        .replace(/<span style="text-decoration:underline;">|<\/span>/g, '');
 
                     if (obj.tagName == 'P') {
+
                         // 1번. 다음 빈칸에 들어갈 말로 가장 적절한 것은?
                         if (obj.innerHTML.includes('번</b>')) {
+
                             question += obj.innerHTML.split('&nbsp;')[1] + '\n';
 
-                            if (!(await page.$eval(`#QUESTION_${j} > div:nth-child(2)`, c => c.innerHTML)).includes('<table')) {
-                                need2ndTable = true;
-                            }
+                            let html = await page.$eval(`#QUESTION_${j} > div:nth-child(2)`, c => c.innerHTML);
+                            if (!html.includes('<table'))    need2ndTable   = true;
+                            if (html.includes('WrongCheck')) answerIsTaken  = true; // AnswerCheck랑 WrongCheck이 공존할 때는 [WrongCheck]이 정답
                         }
 
                         // ① ② ③ ④ ⑤
                         else {
                             let l = obj.textContent;
+
                             if (l.slice(-1) == ' ' || l.slice(-1) == '\xa0') l = l.slice(0, -1);
                             question += l + '\n';
 
                             // 정답
-                            if (obj.innerHTML.includes('AnswerCheck')) {
+                            if (obj.innerHTML.includes('WrongCheck')) {
+
                                 let ld = obj.textContent.slice(0, 1);
                                 answers.push(n.indexOf(ld));
+                                console.log({ CorrectAnswer: 'WrongCheck' });
+                            }
+
+                            // 오정답
+                            else if (!answerIsTaken && obj.innerHTML.includes('AnswerCheck')) {
+
+                                let ld = obj.textContent.slice(0, 1);
+                                answers.push(n.indexOf(ld));
+                                console.log({ CorrectAnswer: 'AnswerCheck' });
                             }
                         }
                     }
@@ -211,7 +234,7 @@ exports.run = async function () {
                         while (l.slice(0, 6) == '&nbsp;') l = l.slice(6);
 
                         l = l.replace(/\n&nbsp;/g, '\n ').replace(/\n &nbsp;/g, '\n  ')
-                             .replace(/<span class="AnswerCheck">/g, '')
+                             .replace(/<span class="WrongCheck">|<span class="AnswerCheck">/g, '')
                              .replace(/&nbsp;/g, '_'.repeat(3))
                              .replace(/<p><\/p>/g, '').split(/<p>|<\/p>/).slice(1, -1).join('\n')
                              .replace(/_  /g, '_ ').replace(/  _/g, ' _')
@@ -226,7 +249,11 @@ exports.run = async function () {
                         while (l.includes(' \n')) l = l.replace(/ \n/g, ' ');
 
                         question += '  ' + l + '\n\n';
-                        need2ndTable = false;
+
+                        if (need2ndTable) {
+                            need2ndTable = false;
+                            k--;
+                        }
                     }
                 }
 
@@ -242,7 +269,10 @@ exports.run = async function () {
         for (let j = 0; j < answers.length; j += 10) {
             joinAnswers += answers.slice(j, j + 10).join(' ') + '\n';
         }
-        fs.writeFileSync('./questions.txt', `${joinAnswers}\n\n\n\n${questions.join('\n\n\n\n')}`, { encoding: 'utf-8' });
+
+        let joinQuestions = questions.join('\n\n\n\n').replace(/ ___\n/g, '\n').replace(/\n\n___/g, '');
+
+        fs.writeFileSync('./questions.txt', `${joinAnswers}\n\n\n\n${joinQuestions}`, { encoding: 'utf-8' });
         console.log('writing done');
 
         // 베네듀는 자동로그아웃됨
