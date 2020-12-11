@@ -49,10 +49,36 @@ const query = { // Object for fetching selector values
     loginPd: '#loginPW',
     loginBtn: 'div form div.login-buttons > button:nth-child(1)',
 
-    subj: '#Subject-select',
+    subjectSelect: '#Subject-select',
     subjEng: 'eAw5Wkv6E92IkZ3O2gUo3w{e}{e}',
     prevSwitch: 'div.main-content div.page-content div.form-group > div:nth-child(2) li > div:nth-child(1) > label',
-    td10th: '#TaskList-table > tbody > tr:nth-child(10)',
+
+    dateFrom: '#dateFrom',
+    datePicker: 'div.datepicker th.datepicker-switch',
+    monthPick: month => `div.datepicker span.month:nth-child(${month})`,
+    dayPick: async (page, day) => {
+        let rstr = null;
+        const trs = await page.$$eval('div.datepicker-days tbody > tr', l => l.map(tr => tr.innerText.split('\t')));
+
+        let s = 0;
+        trs.forEach((tr, i) => { if (tr[0] == '1') {s = i; return;} });
+
+        trs.forEach((tr, i) => {
+            if (rstr != null) return;
+
+            tr.forEach((td, j) => {
+                if (i >= s && parseInt(td) == day) {
+                    rstr = `div.datepicker-days tbody > tr:nth-child(${i+1}) > td:nth-child(${j+1})`;
+                    return;
+                }
+            });
+        });
+
+        return rstr;
+    },
+    // gotday: 'div.datepicker td.active.selected.range-start.day',
+
+    tr10th: '#TaskList-table > tbody > tr:nth-child(10)',
     chrowMax: '#TaskList-table_length > label > select',
 
     problemtr: '#TaskList-table > tbody > tr',
@@ -114,7 +140,7 @@ exports.run = async function () {
         const values = [];
 
         // 시험 과목 -> '영어'
-        await wait(page.select(query.subj, query.subjEng), 1400);
+        await wait(page.select(query.subjectSelect, query.subjEng), 1400);
 
         const recent = await page.$$eval(query.problemtr, el => el.map(x => x.getAttribute('value')));
         recent.forEach(v => values.push(v));
@@ -122,8 +148,20 @@ exports.run = async function () {
 
         // 지난 학습 보기
         await wait(page.click(query.prevSwitch), 2000);
-        for (; await page.$(query.td10th) == null; await aSleep(400)); // 목록 load 대기
+
+        // 시작 날짜 선택
+        await page.click(query.dateFrom);
+        await page.click(query.datePicker);
+        await page.click(query.monthPick(11)); // 11월
+        await page.click(await query.dayPick(page, 10)); // 10일
+        await aSleep(600);
+
+        // 목록 load 대기
+        for (; await page.$(query.tr10th) == null; await aSleep(400)); // waitUntil: 10th <tr> loaded
         console.log('switched subj prev');
+
+        // log #dateFrom
+        console.log(`\n from ${query.dateFrom} 2020-11-10\n`);
 
         // 항목 표시 -> '100'
         await wait(page.select(query.chrowMax, '100'), 600);
@@ -184,9 +222,10 @@ exports.run = async function () {
 
                 let culture_note = false; // has culture note
 
-                spli = spli.replace(/\xa0/g, ' ');
+                spli = spli.replace(/\xa0/g, ' ').replace(/\| Solution Guide \|/g, '{Solution Guide}');
+
                 if (spli.includes('Culture Note')) culture_note = true;
-                let solCount = spli.match(/Solution Guide/g || []).length;
+                let solCount = spli.match(/{Solution Guide}/g || []).length;
 
                 do { spli = spli.replace(/\n\n| \n/g, '\n') } while (spli.includes('\n\n'));
                 spli = spli.split(/\[정답\/모범답안\]|\[해설\]|\n/g).slice(1, -1).filter(v => v != '')
@@ -205,7 +244,7 @@ exports.run = async function () {
                 .split(/Solution Guide|Structure in Focus/gi);
 
                 explain = `${explain[0]}Solution Guide\n${explain[1].replace(/\n/g, ' ').slice(1,-1).replace(/\. /g, '.\n')}\nStructure in Focus${explain[2]}`;
-                explain = explain.replace(/ ①/g, '\n①').replace(/ ②/g, '\n②').replace(/ ③/g, '\n③').replace(/ ④/g, '\n④').replace(/ ⑤/g, '\n⑤');
+                explain = explain.replace(/ ①/g, '\n①').replace(/ ②/g, '\n②').replace(/ ③/g, '\n③').replace(/ ④/g, '\n④').replace(/ ⑤/g, '\n⑤').replace(/  \n| \n/g, '\n');
 
                 if (!explain.match(/\n\nSolution Guide/gi))     explain = explain.replace(/Solution Guide/gi,     '\nSolution Guide');
                 if (!explain.match(/\n\nStructure in Focus/gi)) explain = explain.replace(/Structure in Focus/gi, '\nStructure in Focus');
