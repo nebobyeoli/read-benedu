@@ -141,13 +141,14 @@ exports.run = async function () {
         const problems = [];
         const answers  = [];
         const explains = [];
+        let skippedCount = 0;
 
         let i = 1;
         let problem = '';
 
         const n = [ null, '①', '②', '③', '④', '⑤' ];
 
-        values.pop(); // 처음 두 문제는 제외
+        //values.pop(); // 처음 두 문제는 제외
 
         console.log('values.length:', values.length);
 
@@ -157,9 +158,16 @@ exports.run = async function () {
             console.log('\n', link);
             await page.goto(link, { waitUntil: 'domcontentloaded' });
 
-            for (let j = 1; j <= 2; console.log(i, 'of', values.length*2, 'done'), problems.push(problem), j++, i++) { // 문제 1, 2
+            for (let j = 1; j <= 2; j++, i++) { // 문제 1, 2
 
-                problem = `${i}. `;
+                // 중복되는 문제 제외
+                if (i == 40 || i == 41) {
+                    console.log(i, 'of', values.length*2, 'skipped');
+                    skippedCount++;
+                    continue;
+                }
+
+                problem = `${i-skippedCount}. `;
 
                 let childCount = await page.$eval(`#QUESTION_${j} > div:nth-child(2)`, el => el.childElementCount);
 
@@ -188,7 +196,7 @@ exports.run = async function () {
                 let solution_guide = spli[culture_note?4:3];
                 for (let k = 1; k < solCount; k++) solution_guide += '\n' + spli[k + culture_note?4:3];
 
-                let explain = `${i}번\n정답\t${spli[0]}\n소재\t${spli[1]}\n\n해석\n  ${spli[2]}\n\n`;
+                let explain = `${i-skippedCount}번\n정답\t${spli[0]}\n소재\t${spli[1]}\n\n해석\n  ${spli[2]}\n\n`;
                 if (culture_note) explain += `Culture Note\n${spli[3]}\n\nSolution Guide\n${solution_guide}\n\nStructure in Focus\n${spli[5 + solCount-1]}`;
                 else              explain += `Solution Guide\n${solution_guide}\n\nStructure in Focus\n${spli[4 + solCount-1]}`;
 
@@ -281,7 +289,8 @@ exports.run = async function () {
                              .replace(/ \*/g, '\n*')
                              .replace(/<span style="text-decoration:underline;">|<span style="font-style:italic;">|<\/span>/g, '')
                              .replace(/\n\(/g, '\n  (')
-                             .replace(/\n______/g, '\n  ');
+                             .replace(/\n______/g, '\n  ')
+                             .replace(/ \n/g, '\n');
 
                         while (l.slice(0, 6) == '______') l = l.slice(6);
                         while (l.includes(' \n')) l = l.replace(/ \n/g, ' ');
@@ -298,9 +307,19 @@ exports.run = async function () {
                 problem = problem.replace(/\n\n① ①번\n② ②번\n③ ③번\n④ ④번\n⑤ ⑤번/g, '')
                     .replace(/① /g, '①').replace(/② /g, '②').replace(/③ /g, '③').replace(/④ /g, '④').replace(/⑤ /g, '⑤')
                     .replace(/①/g, '① ').replace(/②/g, '② ').replace(/③/g, '③ ').replace(/④/g, '④ ').replace(/⑤/g, '⑤ ')
-                    .replace(/_ _/g, '__').replace(/ \*/g, '\n*').replace(/\* /g, '*');
+                    .replace(/\(a\) /g, '(a)').replace(/\(b\) /g, '(b)').replace(/\(c\) /g, '(c)').replace(/\(d\) /g, '(d)').replace(/\(e\) /g, '(e)')
+                    .replace(/\(a\)/g, '(a) ').replace(/\(b\)/g, '(b) ').replace(/\(c\)/g, '(c) ').replace(/\(d\)/g, '(d) ').replace(/\(e\)/g, '(e) ')
+                    .replace(/\(a\) ~ \(e\)|\(a\) ~\(e\)|\(a\)~ \(e\)/g, '(a)~(e)')
+                    .replace(/ \u2014 | \u2014|\u2014 /g, '\u2014').replace(/\u2014/g, ' \u2014 ')
+                    .replace(/_ _/g, '__').replace(/ \*/g, '\n*').replace(/\* /g, '*')
+                    .replace(/윗글|윗 글/g, '다음 글');
+
+                problems.push(problem);
+                console.log(i, 'of', values.length*2, 'done');
             }
         }
+
+        console.log('\n', values.length*2 - skippedCount, 'out of', values.length*2, 'problems done,', skippedCount, 'skipped');
 
         console.log('\nwriting...');
 
@@ -315,7 +334,7 @@ exports.run = async function () {
         fs.writeFileSync('./output/explains.txt', `빠른 답\n\n${joinAnswers}\n\n해설\n\n${joinExplains}`, { encoding: 'utf-8' });
         console.log('writing done ./output/explains.txt');
 
-        fs.writeFileSync('./output/problems.txt', `${values.length} DAYS, ${values.length * 2} PROBLEMS\n\n\n\n${joinProblems}`, { encoding: 'utf-8' });
+        fs.writeFileSync('./output/problems.txt', `${values.length} DAYS, ${values.length*2 - skippedCount} PROBLEMS (${skippedCount} skipped)\n\n\n\n${joinProblems}`, { encoding: 'utf-8' });
         console.log('writing done ./output/problems.txt');
 
         // 베네듀는 자동로그아웃됨
