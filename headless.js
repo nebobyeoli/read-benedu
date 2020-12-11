@@ -298,7 +298,7 @@ exports.run = async function () {
                 problem = problem.replace(/\n\n① ①번\n② ②번\n③ ③번\n④ ④번\n⑤ ⑤번/g, '')
                     .replace(/① /g, '①').replace(/② /g, '②').replace(/③ /g, '③').replace(/④ /g, '④').replace(/⑤ /g, '⑤')
                     .replace(/①/g, '① ').replace(/②/g, '② ').replace(/③/g, '③ ').replace(/④/g, '④ ').replace(/⑤/g, '⑤ ')
-                    .replace(/_ _/g, '__').replace(/\* /g, '*');
+                    .replace(/_ _/g, '__').replace(/ \*/g, '\n*').replace(/\* /g, '*');
             }
         }
 
