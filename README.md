@@ -41,7 +41,7 @@ const elArr = await page.$$(selector_multi);
 // page.evaluate (B): runs function parameter command
 const value = await page.evaluate(el => el.getAttribute('value'), elArr);
 
-// page.$eval: runs $ w func param
+// page.$eval : runs $ w func param
 const inner = await page.$eval(selector, el => el.innerHTML);
 
 // page.$$eval: runs $$ w func param
