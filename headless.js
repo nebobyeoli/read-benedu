@@ -190,8 +190,8 @@ exports.run = async function () {
 
                 do { spli = spli.replace(/\n\n| \n/g, '\n') } while (spli.includes('\n\n'));
                 spli = spli.split(/\[정답\/모범답안\]|\[해설\]|\n/g).slice(1, -1).filter(v => v != '')
-                    .map(str => str.replace(/^{|}$|^\||\|$|^\u25a0|^\s/g, '').replace(/^ | $/g, '')).join('\n')
-                    .split(/소재|해석|Culture Note|Solution Guide|Structure in Focus/gi).map(str => str.replace(/^\n|\n$|^ | $|\n | \n/g, ''));
+                    .map(str => str.replace(/^\||\|$|^\u25a0|^\s/g, '').replace(/^ | $/g, '')).join('\n')
+                    .split(/{소재}|{해석}|{Culture Note}|{Solution Guide}|{Structure in Focus}/gi).map(str => str.replace(/^\n|\n$|^ | $|\n | \n/g, ''));
 
                 let solution_guide = spli[culture_note?4:3];
                 for (let k = 1; k < solCount; k++) solution_guide += '\n' + spli[k + culture_note?4:3];
