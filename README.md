@@ -30,24 +30,24 @@ Content reader via puppeteer
 const selector       = 'div.main-content ul > li:nth-child(2)';
 const selector_multi = 'div.main-content ul > li';
 
-// page.evaluate (A) : runs typeof-string param command
+// page.evaluate (A): runs typeof-string param command
 const value = await page.evaluate(`document.querySelector('${selector}').getAttribute('value')`);
 
-// page.$      : runs querySelectorAll()
+// page.$ : runs querySelectorAll()
 const el    = await page.$(selector);
-// page.$$     : runs querySelectorAll()
+// page.$$: runs querySelectorAll()
 const elArr = await page.$$(selector_multi);
 
-// page.evaluate (B) : runs function parameter command
+// page.evaluate (B): runs function parameter command
 const value = await page.evaluate(el => el.getAttribute('value'), elArr);
 
-// page.$eval  : runs $ w func param
+// page.$eval: runs $ w func param
 const inner = await page.$eval(selector, el => el.innerHTML);
 
-// page.$$eval : runs $$ w func param
+// page.$$eval: runs $$ w func param
 // | concentrated example
 // V
-const attr  = await page.$$eval(selector_multi, list => list.map(el => el.getAttribute('value')));
+const attr = await page.$$eval(selector_multi, list => list.map(el => el.getAttribute('value')));
 // el = querySelectorAll()
 // x = each querySelector > map
 ```
